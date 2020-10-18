@@ -9,9 +9,11 @@ import android.graphics.Paint;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.media.ExifInterface;
 import android.media.FaceDetector;
 import android.net.Uri;
 import android.util.AttributeSet;
+import android.util.Log;
 
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
@@ -31,6 +33,10 @@ import org.wikipedia.settings.Prefs;
 import org.wikipedia.util.MathUtil;
 import org.wikipedia.util.log.L;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.security.MessageDigest;
 
 import static org.wikipedia.settings.Prefs.isImageDownloadEnabled;
@@ -67,19 +73,47 @@ public class FaceAndColorDetectImageView extends AppCompatImageView {
             setImageDrawable(placeholder);
             return;
         }
+
+
+
         RequestBuilder<Drawable> builder = Glide.with(this)
                 .load(uri)
                 .placeholder(placeholder)
                 .error(placeholder)
                 .downsample(DownsampleStrategy.CENTER_INSIDE);
 
+        Log.i("WK", "Obrazek: " + uri.toString());
+
         if (shouldDetectFace(uri)) {
             builder = builder.transform(FACE_DETECT_TRANSFORM);
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                ExifInterface exifInterface = null;
+                try {
+                    exifInterface = new ExifInterface(getInputFromURL(uri));
+                    exifInterface.getAttribute(ExifInterface.TAG_IMAGE_WIDTH );
+                    Log.i("TAGX", "Dane EXIF:" + exifInterface.getAttribute(ExifInterface.TAG_IMAGE_WIDTH ) );
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         } else {
             builder = builder.centerCrop();
         }
 
         builder.into(this);
+    }
+
+    public static InputStream getInputFromURL(Uri uri) {
+        try {
+            URL url = new URL(uri.toString());
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setDoInput(true);
+            connection.connect();
+            return connection.getInputStream();
+        } catch (IOException e) {
+            // Log exception
+            return null;
+        }
     }
 
     public void loadImage(@DrawableRes int id) {
