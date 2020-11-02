@@ -86,13 +86,14 @@ public class FaceAndColorDetectImageView extends AppCompatImageView {
 
         if (shouldDetectFace(uri)) {
             builder = builder.transform(FACE_DETECT_TRANSFORM);
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                ExifInterface exifInterface = null;
-                try {
-                    exifInterface = new ExifInterface(getInputFromURL(uri));
-                    exifInterface.getAttribute(ExifInterface.TAG_IMAGE_WIDTH );
-                    Log.i("TAGX", "Dane EXIF:" + exifInterface.getAttribute(ExifInterface.TAG_IMAGE_WIDTH ) );
+            if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.N) {
+                Log.i("WK", "Obrazek - szukanie EXIF ");
+                try (InputStream inputStream = getContext().getContentResolver().openInputStream(uri)) {
+                    ExifInterface exif = new ExifInterface(inputStream);
+                    int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+                    Log.i("WK", "Obrazek orient: " + orientation);
                 } catch (IOException e) {
+                    Log.e("WK", "Obrazek nie przetworzony ");
                     e.printStackTrace();
                 }
             }
@@ -101,19 +102,6 @@ public class FaceAndColorDetectImageView extends AppCompatImageView {
         }
 
         builder.into(this);
-    }
-
-    public static InputStream getInputFromURL(Uri uri) {
-        try {
-            URL url = new URL(uri.toString());
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setDoInput(true);
-            connection.connect();
-            return connection.getInputStream();
-        } catch (IOException e) {
-            // Log exception
-            return null;
-        }
     }
 
     public void loadImage(@DrawableRes int id) {
